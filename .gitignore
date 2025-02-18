@@ -1,5 +1,4 @@
-Local_FAST_CURR_MD_MOEX_CURR_CETS_CNYRUB_TOM.2024-12-04
-Local_FAST_SPECTRA_MD_MOEX_SPECTRA_FUT_CNYRUBF.2024-12-04
-Local_FAST_SPECTRA_MD_MOEX_SPECTRA_FUT_CRZ4.2024-12-04
+data
+scripts/__pycache__
+objects/__pycache__
 __pycache__
-src/__pycache__
