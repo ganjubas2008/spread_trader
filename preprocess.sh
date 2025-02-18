@@ -1,7 +1,7 @@
 #!/bin/bash
 
 read -p "Enter the folder containing the raw CSV files (e.g., data/raw_data): " raw_csv_folder
-read -p "Enter the days to process (comma-separated, e.g., 12-04,12-05): " days
+read -p "Enter the days to process (comma-separated, e.g., 12-04,12-05,12-06): " days
 
 pqt_output_dir="data/preprocessed_data/pqt"
 actions_output_dir="data/preprocessed_data/actions"
