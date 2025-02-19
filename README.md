@@ -44,7 +44,7 @@ $$\text{OBI} := \frac{Volume_{bid} - Volume_{ask}}{Volume_{bid} + Volume_{ask}}$
 
 A trade is executed when:
 
-$$\text{OBI}_A - \text{OBI}_B > \delta_{const} \quad \text{or} \quad \text{OBI}_A - \text{OBI}_B < -\delta_{const}$$  
+$\text{OBI}_A - \text{OBI}_B > \delta_{const}$ or $\text{OBI}_A - \text{OBI}_B < -\delta_{const}$
 
 where **A** and **B** are different financial instruments (e.g., Spot and Perpetual Futures).  
 
