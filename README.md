@@ -1,26 +1,3 @@
-
-# How to run the project:
-
-**Preliminary commands:**
-
-```bash
-chmod +x run.sh preprocess.sh backtest.sh
-```
-
-**Data preprocessing:**
-
-```bash
-./preprocess.sh
-```
-
-**Backtesting:**
-
-```bash
-./backtest.sh
-```
-Note that you need to preprocess data before running backtest.
-______
-
 # Project Description:
 
 This repository provides a complete backtesting framework for evaluating a trading strategy, covering everything from raw data preprocessing to calculating various performance metrics.
@@ -49,3 +26,27 @@ $\text{OBI}_A - \text{OBI}_B > \delta_{const}$ or $\text{OBI}_A - \text{OBI}_B <
 where **A** and **B** are different financial instruments (e.g., Spot and Perpetual Futures).  
 
 However, this static approach is suboptimal. Future versions should improve upon it by dynamically adjusting **$δ$** instead of relying on a fixed threshold **$δ_{const}$**.
+
+______
+
+# How to run the project:
+
+**Preliminary commands:**
+
+```bash
+chmod +x run.sh preprocess.sh backtest.sh
+```
+
+**Data preprocessing:**
+
+```bash
+./preprocess.sh
+```
+
+**Backtesting:**
+
+```bash
+./backtest.sh
+```
+Note that you need to preprocess data before running backtest.
+____
