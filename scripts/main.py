@@ -51,12 +51,12 @@ for action in tqdm(merge_sorted_actions(paths)):
         empty_order_books[instrument].timestamp = action.ts_dt
 
     if previous_timestamp is None or action.ts_dt != previous_timestamp:
-        if action.ts_dt.time() >= time(15, 0):
+        if action.ts_dt.time() >= time(11, 0):
             flag = 1
-            trader.unwind(cny_initial=cny_initial)
+            flag2 = trader.unwind(cny_initial=cny_initial)
             # break  # Stop processing further actions
         else:
-            flag = trader.find_spread_opportunity()
+            flag = trader.find_trade_opportunity()
         c += flag
         previous_timestamp = action.ts_dt
         
@@ -66,14 +66,16 @@ for action in tqdm(merge_sorted_actions(paths)):
         
         print(portfolio)
         print(previous_timestamp)
-    
+        print(f'Approximate PnL (No Liquidity Constraints): {portfolio.approximate_pnl(empty_order_books, cny_initial):,.2f} RUB')
+        print(f'Sharpe Ratio: {portfolio.calculate_sharpe():.4f}')
+        print(f'Max Drawdown: {portfolio.calculate_max_drawdown():.2%}')
         print('______________________________________________')
     
 print("\nFinal Portfolio State:")
 print(portfolio)
 print(f'Trades executed: {c}')
-
-    
-    
+print(f'Final Approximate PnL: {portfolio.approximate_pnl(empty_order_books, cny_initial):,.2f} RUB')
+print(f'Final Sharpe Ratio: {portfolio.calculate_sharpe():.4f}')
+print(f'Final Max Drawdown: {portfolio.calculate_max_drawdown():.2%}')
 
 

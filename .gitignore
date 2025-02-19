@@ -2,3 +2,5 @@ data
 scripts/__pycache__
 objects/__pycache__
 __pycache__
+newoutput.log
+output.log

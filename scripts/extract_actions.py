@@ -104,7 +104,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     days = args.days.split(',')
-    instruments = ['spot']  # Adjust as needed
+    instruments = ['spot', 'perp', 'itrf']
 
     paths = dict()
 

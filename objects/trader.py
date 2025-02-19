@@ -8,43 +8,63 @@ from __init__ import *
 from datetime import time
 
 class SpreadTrader:
-    """Executes taker spread trades with dynamic spread-based logic and supports unwinding positions."""
+    """Executes taker spread trades using Order Book Imbalance (OBI), with specific thresholds per pair."""
 
-    def __init__(self, order_books, portfolio, delta_1=0.002, delta_2=0.001):
-        assert delta_1 > 0 and delta_2 > 0
+    def __init__(self, order_books, portfolio, obi_thresholds=None):
         self.order_books = order_books
         self.portfolio = portfolio
         self.trades = []
-        self.delta_1 = delta_1
-        self.delta_2 = delta_2
+        
+        self.obi_thresholds = obi_thresholds or {
+            "spot_perp": 0.1,
+            "spot_itrf": 0.1,
+            "perp_itrf": 0.1
+        }
 
-    def find_spread_opportunity(self):
-        """Checks for spread opportunities and executes trades."""
+    def get_obi(self, instrument):
+        """Calculates Order Book Imbalance for an instrument using first 10 levels."""
+        ob = self.order_books[instrument]
+        total_bid_vol = sum(ob.bids.values())
+        total_ask_vol = sum(ob.asks.values())
+        
+        if total_bid_vol + total_ask_vol == 0:
+            return None  # Avoid division by zero
+        
+        return (total_bid_vol - total_ask_vol) / (total_bid_vol + total_ask_vol)
+
+    def find_trade_opportunity(self):
+        """Checks for trading opportunities based on OBI per pair."""
         spot_ob, itrf_ob, perp_ob = self.order_books["spot"], self.order_books["itrf"], self.order_books["perp"]
         spot_bid, spot_ask = spot_ob.get_best_bid_ask()
         itrf_bid, itrf_ask = itrf_ob.get_best_bid_ask()
         perp_bid, perp_ask = perp_ob.get_best_bid_ask()
 
+        obi_spot = self.get_obi("spot")
+        obi_perp = self.get_obi("perp")
+        obi_itrf = self.get_obi("itrf")
+
         flag = False
 
-        # Perp-Spot Trading Logic
-        spread_perp_spot = perp_bid - spot_ask if perp_bid and spot_ask else None
-        if spread_perp_spot is not None:
-            if spread_perp_spot > self.delta_1:
-                self.execute_trade("spot", "perp", spot_ask, perp_bid)  # Buy Spot, Sell Perp
+        if obi_spot and obi_perp and obi_itrf:
+            if obi_spot > self.obi_thresholds["spot_perp"] and obi_perp < -self.obi_thresholds["spot_perp"]:
+                self.execute_trade("spot", "perp", spot_ask, perp_bid)
                 flag = True
-            elif spread_perp_spot < self.delta_2:
-                self.execute_trade("perp", "spot", perp_ask, spot_bid)  # Buy Perp, Sell Spot
+            elif obi_perp > self.obi_thresholds["spot_perp"] and obi_spot < -self.obi_thresholds["spot_perp"]:
+                self.execute_trade("perp", "spot", perp_ask, spot_bid)
                 flag = True
 
-        # Itrf-Spot Trading Logic
-        spread_itrf_spot = itrf_bid - spot_ask if itrf_bid and spot_ask else None
-        if spread_itrf_spot is not None:
-            if spread_itrf_spot > self.delta_1:
-                self.execute_trade("spot", "itrf", spot_ask, itrf_bid)  # Buy Spot, Sell Itrf
+            if obi_spot > self.obi_thresholds["spot_itrf"] and obi_itrf < -self.obi_thresholds["spot_itrf"]:
+                self.execute_trade("spot", "itrf", spot_ask, itrf_bid)
                 flag = True
-            elif spread_itrf_spot < self.delta_2:
-                self.execute_trade("itrf", "spot", itrf_ask, spot_bid)  # Buy Itrf, Sell Spot
+            elif obi_itrf > self.obi_thresholds["spot_itrf"] and obi_spot < -self.obi_thresholds["spot_itrf"]:
+                self.execute_trade("itrf", "spot", itrf_ask, spot_bid)
+                flag = True
+
+            if obi_perp > self.obi_thresholds["perp_itrf"] and obi_itrf < -self.obi_thresholds["perp_itrf"]:
+                self.execute_trade("perp", "itrf", perp_ask, itrf_bid)
+                flag = True
+            elif obi_itrf > self.obi_thresholds["perp_itrf"] and obi_perp < -self.obi_thresholds["perp_itrf"]:
+                self.execute_trade("itrf", "perp", itrf_ask, perp_bid)
                 flag = True
 
         return flag
@@ -74,9 +94,6 @@ class SpreadTrader:
         if safe_trade_size == 0:
             return
     
-        if safe_trade_size < available_size:
-            print(f"⚠️ Trade partially executed: {safe_trade_size:.2f}/{available_size:.2f}")
-    
         trade.size = safe_trade_size
         trade.apply(self.portfolio)
     
@@ -84,62 +101,50 @@ class SpreadTrader:
         self.order_books[sell_market].update_liquidity("bid", sell_price, safe_trade_size)
     
         self.trades.append(trade)
-        
         self.portfolio.last_update_ts_dt = trade.ts_dt
-        
-        # print(trade)
 
-    def unwind(self, cny_initial = 10_000_000):
-        """Checks for spread opportunities and executes trades."""
+    def unwind(self, cny_initial=10_000_000):
+        """Unwinds open positions based on OBI, ensuring minimal market impact."""
+        # print("🔄 Unwinding positions...")
+
         spot_ob, itrf_ob, perp_ob = self.order_books["spot"], self.order_books["itrf"], self.order_books["perp"]
         spot_bid, spot_ask = spot_ob.get_best_bid_ask()
         itrf_bid, itrf_ask = itrf_ob.get_best_bid_ask()
         perp_bid, perp_ask = perp_ob.get_best_bid_ask()
-        
-        
+
         open_positions = {
             'spot': self.portfolio.cny_balance - cny_initial,
             'perp': self.portfolio.perp_balance,
             'itrf': self.portfolio.itrf_balance
         }
-        
+
+        obi_spot = self.get_obi("spot")
+        obi_perp = self.get_obi("perp")
+        obi_itrf = self.get_obi("itrf")
+
         flag = False
 
-        spread_perp_spot = perp_bid - spot_ask if perp_bid and spot_ask else None
-        if spread_perp_spot is not None:
-            if open_positions['spot'] < 0 and open_positions['perp'] > 0:
-                self.execute_trade("spot", "perp", spot_ask, perp_bid)  # Buy Spot, Sell Perp
+        if obi_spot and obi_perp and obi_itrf:
+            if open_positions['spot'] < 0 and open_positions['perp'] > 0 and obi_perp > self.obi_thresholds["spot_perp"]:
+                self.execute_trade("spot", "perp", spot_ask, perp_bid)
                 flag = True
-            elif open_positions['spot'] > 0 and open_positions['perp'] < 0:
-                self.execute_trade("perp", "spot", perp_ask, spot_bid)  # Buy Perp, Sell Spot
-                flag = True
-                
-        open_positions = {
-            'spot': self.portfolio.cny_balance - cny_initial,
-            'perp': self.portfolio.perp_balance,
-            'itrf': self.portfolio.itrf_balance
-        }
-
-        # Itrf-Spot Trading Logic
-        spread_itrf_spot = itrf_bid - spot_ask if itrf_bid and spot_ask else None
-        if spread_itrf_spot is not None:
-            if open_positions['spot'] < 0 and open_positions['itrf'] > 0:
-                self.execute_trade("spot", "itrf", spot_ask, itrf_bid)  # Buy Spot, Sell Itrf
-                flag = True
-            elif open_positions['spot'] > 0 and open_positions['itrf'] < 0:
-                self.execute_trade("itrf", "spot", itrf_ask, spot_bid)  # Buy Itrf, Sell Spot
-                flag = True
-        
-        # Itrf-Perp Trading Logic
-        spread_itrf_perp = itrf_bid - perp_ask if itrf_bid and perp_ask else None
-        if spread_itrf_perp is not None:
-            if open_positions['perp'] < 0 and open_positions['itrf'] > 0:
-                self.execute_trade("perp", "itrf", perp_ask, itrf_bid)  # Buy Perp, Sell Itrf
-                flag = True
-            elif open_positions['perp'] > 0 and open_positions['itrf'] < 0:
-                self.execute_trade("itrf", "perp", itrf_ask, perp_bid)  # Buy Itrf, Sell Perp
+            elif open_positions['spot'] > 0 and open_positions['perp'] < 0 and obi_spot > self.obi_thresholds["spot_perp"]:
+                self.execute_trade("perp", "spot", perp_ask, spot_bid)
                 flag = True
 
+            if open_positions['spot'] < 0 and open_positions['itrf'] > 0 and obi_itrf > self.obi_thresholds["spot_itrf"]:
+                self.execute_trade("spot", "itrf", spot_ask, itrf_bid)
+                flag = True
+            elif open_positions['spot'] > 0 and open_positions['itrf'] < 0 and obi_spot > self.obi_thresholds["spot_itrf"]:
+                self.execute_trade("itrf", "spot", itrf_ask, spot_bid)
+                flag = True
+
+            if open_positions['perp'] < 0 and open_positions['itrf'] > 0 and obi_itrf > self.obi_thresholds["perp_itrf"]:
+                self.execute_trade("perp", "itrf", perp_ask, itrf_bid)
+                flag = True
+            elif open_positions['perp'] > 0 and open_positions['itrf'] < 0 and obi_perp > self.obi_thresholds["perp_itrf"]:
+                self.execute_trade("itrf", "perp", itrf_ask, perp_bid)
+                flag = True
+
+        #print("✅ Unwinding attempt completed.")
         return flag
-
-
