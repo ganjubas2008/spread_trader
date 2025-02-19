@@ -4,7 +4,7 @@ This repository provides a complete backtesting framework for evaluating a tradi
 
 ### Architecture:
 1) **Preprocessing**:  
-   - `./preprocess.sh` takes the path to raw market data, copies it into `data/raw_data` directory, unzips and strcures it.
+   - `./prepare_data.sh` takes the path to raw market data, copies it into `data/raw_data` directory, unzips and strcures it.
    - Then it converts data into a more lightweight Parquet (`.pqt`) format. The processed market snapshots are stored in the `data/preprocessed_data/pqt` directory.  
    - The script then extracts all market actions (e.g., placing, modifying, or canceling orders) from the order book data. These actions are stored in the `data/preprocessed_data/actions` directory.
 
