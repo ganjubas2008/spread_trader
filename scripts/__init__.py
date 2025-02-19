@@ -8,6 +8,8 @@ import sys
 import argparse
 import warnings
 from tqdm import tqdm
+import shutil
+from pathlib import Path
 
 import pyarrow.parquet as pq
 import pyarrow as pa
