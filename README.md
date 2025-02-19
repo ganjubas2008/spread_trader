@@ -21,7 +21,7 @@ $$\text{OBI} := \frac{Volume_{bid} - Volume_{ask}}{Volume_{bid} + Volume_{ask}}$
 
 A trade is executed when:
 
-$\text{OBI}_A - \text{OBI}_B > \delta$  or $\text{OBI}_B - \text{OBI}_A < -\delta$
+$\text{OBI}_A - \text{OBI}_B > \delta$ or $\text{OBI}_A - \text{OBI}_B < -\delta$
 
 where **A** and **B** are different financial instruments (e.g., Spot and Perpetual Futures).  
 
@@ -34,13 +34,13 @@ ______
 **Preliminary commands:**
 
 ```bash
-chmod +x run.sh preprocess.sh backtest.sh
+chmod +x run.sh prepare_data.sh backtest.sh
 ```
 
 **Data preprocessing:**
 
 ```bash
-./preprocess.sh
+./prepare_data.sh
 ```
 
 **Backtesting:**
@@ -48,5 +48,5 @@ chmod +x run.sh preprocess.sh backtest.sh
 ```bash
 ./backtest.sh
 ```
-Note that you need to preprocess data before running backtest.
+Note that you need to prepare_data data before running backtest.
 ____
